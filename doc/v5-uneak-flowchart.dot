@@ -1,0 +1,58 @@
+digraph gbs {
+	subgraph {
+		node [ shape=box; style=filled, color=grey90; ]
+		FastqToTagCountPlugin;
+		MergeMultipleTagCountPlugin;
+		UTagCountToTagPairPlugin;
+		UTagPairToTOPMPlugin;
+		SeqToTBTHDF5Plugin;
+		ModifyTBTHDF5Plugin;
+		DiscoverySNPCallerPlugin;
+		ProductionSNPCallerPlugin;
+	};
+
+	// ################
+	FASTQ -> FastqToTagCountPlugin;
+	"KeyFile.txt" -> FastqToTagCountPlugin;
+
+	FastqToTagCountPlugin -> "TagCounts/1";
+	FastqToTagCountPlugin -> "TagCounts/n";
+
+	// ################
+	"TagCounts/1" -> MergeMultipleTagCountPlugin;
+	"TagCounts/n" -> MergeMultipleTagCountPlugin;
+
+	{rank=same "TagCounts/1" "TagCounts/n"};
+	"TagCounts/1" -> "TagCounts/n" [ style=dotted; dir=none ];
+
+	MergeMultipleTagCountPlugin -> TagCount;
+
+	// ################
+	TagCount -> UTagCountToTagPairPlugin -> TagPairs;
+
+	// ################
+	TagPairs -> UTagPairToTOPMPlugin -> "Pairs.topm";
+
+	// ################
+	FASTQ -> SeqToTBTHDF5Plugin;
+	"KeyFile.txt" -> SeqToTBTHDF5Plugin;
+	"Pairs.topm" -> SeqToTBTHDF5Plugin;
+
+	SeqToTBTHDF5Plugin -> "TagsByTaxa.h5";
+
+	// ################
+	"TagsByTaxa.h5" -> ModifyTBTHDF5Plugin -> "TagsByTaxa.pivot.h5";
+
+	// ################
+	"TagsByTaxa.pivot.h5" -> DiscoverySNPCallerPlugin;
+	"Pairs.topm" -> DiscoverySNPCallerPlugin;
+
+	DiscoverySNPCallerPlugin -> "Discovery.topm";
+
+	// ################
+	FASTQ -> ProductionSNPCallerPlugin;
+	"KeyFile.txt" -> ProductionSNPCallerPlugin;
+	"Discovery.topm" -> ProductionSNPCallerPlugin;
+
+	ProductionSNPCallerPlugin -> "Genotypes.h5";
+}
